@@ -1,4 +1,24 @@
 ### Register User
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+    "username": "papaw",
+    "email": "papaw@gmail.com",
+    "password": "P@55word",
+    "roles": "umum"
+}
+
+### Login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+    "username": "jacob",
+    "password": "P@55word"
+}
+
+### Register User
 POST http://localhost:3000/register
 Content-Type: application/json
 
@@ -8,6 +28,11 @@ Content-Type: application/json
     "password": "P@55word",
     "confPassword": "P@55word"
 }
+
+### Get User
+GET http://localhost:3000/user
+Content-Type: application/json
+
 ### Register User
 POST http://localhost:3000/register
 Content-Type: application/json
@@ -24,9 +49,10 @@ POST http://localhost:3000/login
 Content-Type: application/json
 
 {
-    "email": "testuser2@example.com",
+    "email": "gmail@gmail.com",
     "password": "P@55word"
 }
+
 
 
 #########################################
@@ -53,6 +79,7 @@ Content-Type: application/json
 ### Get User
 GET http://localhost:3000/user
 Content-Type: application/json
+
 ### Get User
 GET http://localhost:3000/bidang
 Content-Type: application/json
