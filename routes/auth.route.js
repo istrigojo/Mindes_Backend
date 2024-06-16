@@ -1,16 +1,12 @@
 import express from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import { Strategy as LocalStrategy } from "passport-local"; 
+import { Strategy as LocalStrategy } from "passport-local";
 import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
-import { query } from "../database/db.js"; 
+import { query } from "../database/db.js";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 
-// const path = require("path");
-// const LocalStrategy = require("passport-local").Strategy;
-
-// require("dotenv").config();
 dotenv.config();
 
 const router = express.Router();
@@ -26,18 +22,17 @@ passport.use(
     async (email, password, done) => {
       try {
         const result = await query(
-          "SELECT * FROM usertable WHERE email = ? AND password = ?",
-          [email, password]
+          "SELECT * FROM usertable WHERE email = ?",
+          [email]
         );
 
-        
         const user = result[0]; // Ambil user pertama dari hasil query
 
         if (!user) {
           return done(null, false, { message: "Email tidak ditemukan." });
         }
 
-        const isValid = await user.isValidPassword(password);
+        const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
           return done(null, false, { message: "Kata sandi salah." });
         }
@@ -94,11 +89,13 @@ router.post(
   }
 );
 
-router.post(
-  "/register", async (req, res) => {
+router.post("/register", async (req, res) => {
   try {
     const { username, email, password, roles } = req.body;
 
+    const salt = await bcrypt.genSalt(12);
+    const hash = await bcrypt.hash(password, salt);
+    
     const checkUser = await query("SELECT * FROM usertable WHERE email = ?", [
       email,
     ]);
@@ -108,7 +105,7 @@ router.post(
 
     await query(
       "INSERT INTO usertable (username, password, email, roles) VALUES (?, ?, ?, ?)",
-      [username, password, email, roles]
+      [username, hash, email, roles]
     );
 
     const newUser = await query("SELECT * FROM usertable WHERE email = ?", [
@@ -116,7 +113,7 @@ router.post(
     ]);
     const user = newUser[0];
 
-    const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id_user }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
@@ -143,5 +140,4 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// module.exports = router;
 export default router;
