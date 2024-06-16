@@ -1,61 +1,45 @@
-import { query } from "../database/db.js"
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
-import dotenv from 'dotenv'
+import { query } from "../database/db.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
-dotenv.config()
+// Register Endpoint
+export const register = async (req, res) => {
+  const { username, email, password } = req.body;
+  try {
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await query(" INSERT INTO usertable(username, email, password) VALUES (?, ?, ?)", [username, email, hashedPassword]);
+    return res.status(200).json({ msg: "User registered successfully" });
+  } catch (error) {
+    console.log("Terjadi kesalahan", error);
+    return res.status(500).json({ msg: "Server error occurred" });
+  }
+};
 
-const register = async(req,res)=>{
-    const {username, password, confPassword} = req.body
-
-    if(username===""||username===undefined||password===""||password===undefined||confPassword===""||confPassword===undefined){
-        return res.status(400).json({error:"Field must not be empty"})
+// Login Endpoint
+export const login = async (req, res) => {
+  // const { email, password } = req.body;
+  console.log(req.body);
+  try {
+    const [result] = await query("SELECT * FROM usertable WHERE email = ?", [email]);
+    if (result.length === 0) {
+      return res.status(401).json({ msg: "Invalid email or password" });
     }
 
-    if (password!==confPassword){
-        return res.status(400).json({error:"Password not match"})
+    // console.log(result);
+    const user = result;
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      return res.status(401).json({ msg: "Invalid username or password" });
     }
 
-    try {
-        const salt = await bcrypt.genSalt(12)
-        const hash = await bcrypt.hash(password,salt)
-        await query("INSERT INTO authtable(,password) values (?,?)", [username, hash])
-        return res.status(200).json({username, hash})
-    } catch (error) {
-        return res.status(500).json({error:"Terjadi kesalahan"})
-    }
-}
-
-
-const login = async(req,res)=>{
-    const {username,password:inputPass} = req.body
-    // TODO Validasi username dan password
-    try {
-        const [validation] =await query("select id from user where username=?", [username])
-        
-        if(validation===undefined){
-            return res.status(400).json({error:"User not found"})
-        }
-        const [check] = await query ("select id, username, password from user where id=?", [validation.id])
-        const isMatch = await bcrypt.compare(inputPass, check.password)
-        if(!isMatch){
-            return res.status(400).json({error:"Password is wrong"})
-        }
-
-        const data ={
-            id:check.id,
-            username:check.username
-        }
-
-        jwt.sign(data, process.env.SECRETKEY, (err,token)=>{
-            if(err) throw err
-            return res.status(200).json({Authorization:`Bearer ${token}`})    
-        })
-
-        
-    } catch (error) {
-        return res.status(500).json({error:"Terjadi kesalahan"})
-    }
-}
-
-export {register,login}
+    const token = jwt.sign({ id: user.id_user, username: user.username }, "your_jwt_secret_key", { expiresIn: "1h" });
+    const bearerToken = `Bearer ${token}`;
+    return res.status(200).json({ msg: "Login successful", token: bearerToken });
+  } catch (error) {
+    console.log("Terjadi kesalahan", error);
+    return res.status(500).json({ msg: "Server error occurred" });
+  }
+};
